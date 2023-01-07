@@ -94,7 +94,7 @@ async fn repository_search(query: String) -> Result {
 		OK,
 		json!({
 			"notice": api_notice(),
-			"message": "Successful",
+			"status": "Successful",
 			"date": response.date,
 			"data": data,
 		}),
@@ -142,7 +142,7 @@ async fn repository_ranking(ranking: String) -> Result {
 		OK,
 		json!({
 			"notice": api_notice(),
-			"message": "200 OK",
+			"status": "Successful",
 			"date": chrono::Utc::now().to_rfc3339(),
 			"data": data,
 		}),
