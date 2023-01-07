@@ -39,8 +39,13 @@ async fn main() -> Result<()> {
 	app.at("/").get(routes::index);
 	app.at("/healthz").get(routes::health);
 
-	app.at("/community/repositories/check")
-		.get(routes::repository_safety);
+	app.at("/community/repositories").nest({
+		let mut app = tide::new();
+		app.at("/safety").get(routes::repository_safety);
+		app.at("/search").get(routes::repository_search_ranking);
+
+		app
+	});
 
 	app.listen("0.0.0.0:3000").await?;
 	return Ok(());
