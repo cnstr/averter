@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use reqwest::StatusCode as RStatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, json, ser::PrettyFormatter, Serializer, Value};
 use std::{collections::HashMap, future::Future};
@@ -18,30 +19,61 @@ pub fn json_stringify(value: Value) -> String {
 pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 	path: &str,
 	query: HashMap<&str, &str>,
-) -> Result<R, String> {
+) -> Result<R, Response> {
 	let mut url = Url::parse(&format!("{}{}", env!("CANISTER_API_ENDPOINT"), path)).unwrap();
 
 	for (key, value) in query {
 		url.query_pairs_mut().append_pair(key, value);
 	}
 
-	return tokio_run(async {
+	let result = tokio_run(async {
 		let res = match reqwest::get(url).await {
 			Ok(res) => res,
-			Err(err) => return Err(err.to_string()),
+			Err(err) => {
+				println!("Error: {}", err);
+
+				return Err(json_respond(
+					StatusCode::InternalServerError,
+					json!({
+						"status": "500 Internal Server Error",
+						"error": "Failed to fetch data from Canister 2",
+						"date": chrono::Utc::now().to_rfc3339(),
+					}),
+				));
+			}
 		};
 
+		if cfg!(debug_assertions) {
+			println!("v2 -> {} {}", res.status(), res.url());
+		}
+
 		match res.status() {
-			reqwest::StatusCode::OK => {
+			RStatusCode::OK => {
 				let text = res.text().await.unwrap();
 				let value: R = from_str(&text).unwrap();
 				return Ok(value);
 			}
+
+			RStatusCode::BAD_REQUEST => {
+				let text = res.text().await.unwrap();
+				let value: Value = from_str(&text).unwrap();
+				return Err(json_respond(StatusCode::BadRequest, value));
+			}
+
 			_ => {
-				return Err("Failed to deserialize response".to_owned());
+				return Err(json_respond(
+					StatusCode::InternalServerError,
+					json!({
+						"status": "500 Internal Server Error",
+						"error": "Failed to fetch data from Canister 2",
+						"date": chrono::Utc::now().to_rfc3339(),
+					}),
+				));
 			}
 		};
 	});
+
+	result
 }
 
 pub fn api_notice() -> Value {
