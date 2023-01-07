@@ -1,30 +1,5 @@
-[package]
-name = "averter"
-version = "1.0.0"
-edition = "2021"
-build = "build.rs"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-chrono = "0.4.23"
-lazy_static = "1.4.0"
-reqwest = "0.11.13"
-serde = { version = "1.0.152", features = ["std", "derive"] }
-serde_json = { version = "1.0.91", features = ["preserve_order"] }
-tide = "0.16.0"
-tokio = { version = "1.24.1", features = ["full"] }
-url = "2.3.1"
-
-[build-dependencies]
-anyhow = "1.0.68"
-reqwest = "0.11.13"
-serde_json = "1.0.91"
-serde_yaml = "0.9.16"
-tokio = { version = "1.23.0", features = ["full"] }
-vergen = "7.4.4"
-
 [workspace]
 members = [
-	"deploy"
+	"crates/averter",
+	"crates/deploy"
 ]
