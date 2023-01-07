@@ -46,7 +46,7 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 		},
 
 		Err(err) => {
-			println!("Error: {}", err);
+			println!("Error: {err}");
 			return Ok(json_respond(
 				UnprocessableEntity,
 				json!({
@@ -93,7 +93,7 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 				})
 				.collect::<Vec<Value>>();
 
-			return Ok(json_respond(
+			Ok(json_respond(
 				OK,
 				json!({
 					"notice": api_notice(),
@@ -101,7 +101,7 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 					"date": response.date,
 					"data": data
 				}),
-			));
+			))
 		}
 	}
 }

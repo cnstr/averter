@@ -71,7 +71,7 @@ pub async fn package_lookup(req: Request<()>) -> Result {
 		},
 
 		Err(err) => {
-			println!("Error: {}", err);
+			println!("Error: {err}");
 			return Ok(json_respond(
 				UnprocessableEntity,
 				json!({
@@ -84,7 +84,7 @@ pub async fn package_lookup(req: Request<()>) -> Result {
 	};
 
 	let query = HashMap::from([]); // No queries necessary here
-	let uri = &format!("/jailbreak/package/{}", id).to_owned();
+	let uri = &format!("/jailbreak/package/{id}").to_owned();
 
 	let mut response = match fetch_v2::<Response>(uri, query).await {
 		Ok(response) => response,

@@ -1,3 +1,9 @@
+#[warn(clippy::all)]
+#[warn(clippy::correctness)]
+#[warn(clippy::suspicious)]
+#[warn(clippy::style)]
+#[warn(clippy::complexity)]
+#[warn(clippy::perf)]
 mod routes;
 pub mod utility;
 
@@ -23,7 +29,7 @@ async fn main() -> Result<()> {
 	app.with(response_time);
 	app.with(After(|mut res: Response| async {
 		if let Some(err) = res.downcast_error::<Error>() {
-			println!("Error: {}", err);
+			println!("Error: {err}");
 			res = json_respond(
 				InternalServerError,
 				json!({
@@ -57,7 +63,8 @@ async fn main() -> Result<()> {
 	});
 
 	app.listen("0.0.0.0:3000").await?;
-	return Ok(());
+
+	Ok(())
 }
 
 fn response_time<'a>(
@@ -70,6 +77,7 @@ fn response_time<'a>(
 		let elapsed = start.elapsed().as_millis();
 
 		res.insert_header("X-Response-Time", elapsed.to_string());
-		return Ok(res);
+
+		Ok(res)
 	})
 }

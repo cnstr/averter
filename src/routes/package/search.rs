@@ -69,7 +69,7 @@ pub async fn package_search(req: Request<()>) -> Result {
 		},
 
 		Err(err) => {
-			println!("Error: {}", err);
+			println!("Error: {err}");
 			return Ok(json_respond(
 				UnprocessableEntity,
 				json!({

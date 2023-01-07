@@ -7,7 +7,7 @@ use tide::{Response, StatusCode};
 use tokio::runtime::{Builder, Runtime};
 use url::Url;
 
-pub fn json_stringify(value: Value) -> String {
+#[must_use] pub fn json_stringify(value: Value) -> String {
 	let buffer = Vec::new();
 	let formatter = PrettyFormatter::with_indent(b"    ");
 	let mut serialized = Serializer::with_formatter(buffer, formatter);
@@ -20,17 +20,17 @@ pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 	path: &str,
 	query: HashMap<&str, &str>,
 ) -> Result<R, Response> {
-	let mut url = Url::parse(&format!("{}{}", env!("CANISTER_API_ENDPOINT"), path)).unwrap();
+	let mut url = Url::parse(&format!("{}{path}", env!("CANISTER_API_ENDPOINT"))).unwrap();
 
 	for (key, value) in query {
 		url.query_pairs_mut().append_pair(key, value);
 	}
 
-	let result = tokio_run(async {
+	tokio_run(async {
 		let res = match reqwest::get(url).await {
 			Ok(res) => res,
 			Err(err) => {
-				println!("Error: {}", err);
+				println!("Error: {err}");
 
 				return Err(json_respond(
 					StatusCode::InternalServerError,
@@ -51,46 +51,42 @@ pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 			RStatusCode::OK => {
 				let text = res.text().await.unwrap();
 				let value: R = from_str(&text).unwrap();
-				return Ok(value);
+				Ok(value)
 			}
 
 			RStatusCode::BAD_REQUEST => {
 				let text = res.text().await.unwrap();
 				let value: Value = from_str(&text).unwrap();
-				return Err(json_respond(StatusCode::BadRequest, value));
+				Err(json_respond(StatusCode::BadRequest, value))
 			}
 
 			RStatusCode::NOT_FOUND => {
 				let text = res.text().await.unwrap();
 				let value: Value = from_str(&text).unwrap();
-				return Err(json_respond(StatusCode::NotFound, value));
+				Err(json_respond(StatusCode::NotFound, value))
 			}
 
-			_ => {
-				return Err(json_respond(
-					StatusCode::InternalServerError,
-					json!({
-						"status": "500 Internal Server Error",
-						"error": "Failed to fetch data from Canister 2",
-						"date": chrono::Utc::now().to_rfc3339(),
-					}),
-				));
-			}
-		};
-	});
-
-	result
+			_ => Err(json_respond(
+				StatusCode::InternalServerError,
+				json!({
+					"status": "500 Internal Server Error",
+					"error": "Failed to fetch data from Canister 2",
+					"date": chrono::Utc::now().to_rfc3339(),
+				}),
+			)),
+		}
+	})
 }
 
-pub fn api_notice() -> Value {
-	return json!({
+#[must_use] pub fn api_notice() -> Value {
+	json!({
 		"api": env!("CANISTER_NOTICE_API"),
 		"data": env!("CANISTER_NOTICE_DATA"),
 		"migration": env!("CANISTER_NOTICE_MIGRATION").replace("{{docs}}", env!("CANISTER_DOCS_ENDPOINT")),
-	});
+	})
 }
 
-pub fn json_respond(status: StatusCode, value: Value) -> Response {
+#[must_use] pub fn json_respond(status: StatusCode, value: Value) -> Response {
 	Response::builder(status)
 		.header("Content-Type", "application/json")
 		.body(json_stringify(value))
@@ -102,5 +98,5 @@ lazy_static! {
 }
 
 pub fn tokio_run<F: Future>(future: F) -> <F as Future>::Output {
-	return RUNTIME.block_on(future);
+	RUNTIME.block_on(future)
 }

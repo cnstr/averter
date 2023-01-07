@@ -26,7 +26,7 @@ fn main() -> Result<()> {
 	let manifest = load_manifest();
 	fetch_k8s_details(manifest["build"]["k8s_control_plane"].as_str().unwrap());
 
-	return Ok(());
+	Ok(())
 }
 
 fn add_config(key: &str, value: &str) {
@@ -104,7 +104,7 @@ fn load_manifest() -> Value {
 		manifest["notice"]["migration"].as_str().unwrap(),
 	);
 
-	return manifest;
+	manifest
 }
 
 #[tokio::main]

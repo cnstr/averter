@@ -5,7 +5,7 @@ use tide::{Request, Result, StatusCode::Ok as OK};
 use crate::utility::json_respond;
 
 pub async fn index(req: Request<()>) -> Result {
-	return Ok(json_respond(
+	Ok(json_respond(
 		OK,
 		json!({
 			"status": "200 Succesful",
@@ -30,5 +30,5 @@ pub async fn index(req: Request<()>) -> Result {
 				"user_agent": req.header("User-Agent").unwrap()[0].to_string()
 			}
 		}),
-	));
+	))
 }

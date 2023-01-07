@@ -38,29 +38,27 @@ pub async fn repository_search_ranking(req: Request<()>) -> Result {
 			Some(query) => return repository_search(query).await,
 			None => match query.ranking {
 				Some(ranking) => return repository_ranking(ranking).await,
-				None => {
-					return Ok(json_respond(
-						BadRequest,
-						json!({
-							"status": "400 Bad Request",
-							"error": "Missing query parameter: \'query\' or \'ranking\'",
-							"date": chrono::Utc::now().to_rfc3339(),
-						}),
-					));
-				}
+				None => Ok(json_respond(
+					BadRequest,
+					json!({
+						"status": "400 Bad Request",
+						"error": "Missing query parameter: \'query\' or \'ranking\'",
+						"date": chrono::Utc::now().to_rfc3339(),
+					}),
+				)),
 			},
 		},
 
 		Err(err) => {
-			println!("Error: {}", err);
-			return Ok(json_respond(
+			println!("Error: {err}");
+			Ok(json_respond(
 				UnprocessableEntity,
 				json!({
 					"status": "422 Unprocessable Entity",
 					"error": "Malformed query parameters",
 					"date": chrono::Utc::now().to_rfc3339(),
 				}),
-			));
+			))
 		}
 	}
 }
@@ -103,11 +101,8 @@ async fn repository_search(query: String) -> Result {
 
 async fn repository_ranking(ranking: String) -> Result {
 	let ranks = ranking
-		.split(",")
-		.filter_map(|rank| match rank {
-			"1" | "2" | "3" | "4" | "5" => Some(rank),
-			_ => None,
-		})
+		.split(',')
+		.filter(|rank| matches!(rank, &"1" | &"2" | &"3" | &"4" | &"5"))
 		.collect::<HashSet<&str>>();
 
 	let query = HashMap::from([("rank", "*")]);
@@ -138,7 +133,7 @@ async fn repository_ranking(ranking: String) -> Result {
 		})
 		.collect::<Vec<Value>>();
 
-	return Ok(json_respond(
+	Ok(json_respond(
 		OK,
 		json!({
 			"notice": api_notice(),
@@ -146,5 +141,5 @@ async fn repository_ranking(ranking: String) -> Result {
 			"date": chrono::Utc::now().to_rfc3339(),
 			"data": data,
 		}),
-	));
+	))
 }
