@@ -47,6 +47,15 @@ async fn main() -> Result<()> {
 		app
 	});
 
+	app.at("/community/packages").nest({
+		let mut app = tide::new();
+		app.at("/").get(routes::package_lookup);
+		app.at("/lookup").get(routes::package_multi_lookup);
+		app.at("/search").get(routes::package_search);
+
+		app
+	});
+
 	app.listen("0.0.0.0:3000").await?;
 	return Ok(());
 }
