@@ -60,6 +60,12 @@ pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 				return Err(json_respond(StatusCode::BadRequest, value));
 			}
 
+			RStatusCode::NOT_FOUND => {
+				let text = res.text().await.unwrap();
+				let value: Value = from_str(&text).unwrap();
+				return Err(json_respond(StatusCode::NotFound, value));
+			}
+
 			_ => {
 				return Err(json_respond(
 					StatusCode::InternalServerError,
