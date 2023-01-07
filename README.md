@@ -6,7 +6,7 @@ It works by completing the following tasks in order:
 * Rearranging the data to match the v1 API responses
 
 ### Development
-This project utilizes `Rust`[https://rust-lang.org] and `cargo`.<br>
+This project utilizes [`Rust`](https://rust-lang.org) and `cargo`.<br>
 To build the project, run `cargo build` and to run the project, run `cargo run`.<br>
 
 ### Deployment
