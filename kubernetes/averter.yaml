@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: averter
+  namespace: canister
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: averter
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: averter
+  namespace: canister
+spec:
+  selector:
+    matchLabels:
+      app: averter
+  template:
+    metadata:
+      labels:
+        app: averter
+    spec:
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: harbor-bot
+      containers:
+      - name: api
+        image: tale.me/canister/averter:1.0.0
+        ports:
+        - name: averter
+          containerPort: 3000
