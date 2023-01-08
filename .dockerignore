@@ -1,0 +1,7 @@
+/.vscode/
+/target/
+.dockerignore
+Dockerfile
+LICENSE
+README.md
+Taskfile.yaml
