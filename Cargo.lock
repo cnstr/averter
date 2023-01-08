@@ -609,10 +609,8 @@ dependencies = [
 name = "deploy"
 version = "1.0.0"
 dependencies = [
- "reqwest",
  "serde_json",
  "serde_yaml",
- "tokio",
 ]
 
 [[package]]
