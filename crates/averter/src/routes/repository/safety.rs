@@ -36,6 +36,7 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 					return Ok(json_respond(
 						BadRequest,
 						json!({
+							"notice": api_notice(),
 							"status": "400 Bad Request",
 							"error": "Missing query parameters",
 							"date": chrono::Utc::now().to_rfc3339(),
@@ -50,6 +51,7 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 			return Ok(json_respond(
 				UnprocessableEntity,
 				json!({
+					"notice": api_notice(),
 					"status": "422 Unprocessable Entity",
 					"error": "Malformed query parameters",
 					"date": chrono::Utc::now().to_rfc3339(),
@@ -68,6 +70,7 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 		true => Ok(json_respond(
 			OK,
 			json!({
+				"notice": api_notice(),
 				"status": "Successful",
 				"date": response.date,
 				"data": match response.data[0].safe {

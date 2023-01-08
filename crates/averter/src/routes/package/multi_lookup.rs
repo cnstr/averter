@@ -60,6 +60,7 @@ pub async fn package_multi_lookup(req: Request<()>) -> Result {
 				return Ok(json_respond(
 					BadRequest,
 					json!({
+						"notice": api_notice(),
 						"status": "400 Bad Request",
 						"error": "Missing query parameter: \'packages\'",
 						"date": chrono::Utc::now().to_rfc3339(),
@@ -73,6 +74,7 @@ pub async fn package_multi_lookup(req: Request<()>) -> Result {
 			return Ok(json_respond(
 				UnprocessableEntity,
 				json!({
+					"notice": api_notice(),
 					"status": "422 Unprocessable Entity",
 					"error": "Malformed query parameters",
 					"date": chrono::Utc::now().to_rfc3339(),

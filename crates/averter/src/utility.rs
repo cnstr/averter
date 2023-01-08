@@ -7,7 +7,7 @@ use tide::{Response, StatusCode};
 use tokio::runtime::{Builder, Runtime};
 use url::Url;
 
-#[must_use] pub fn json_stringify(value: Value) -> String {
+pub fn json_stringify(value: Value) -> String {
 	let buffer = Vec::new();
 	let formatter = PrettyFormatter::with_indent(b"    ");
 	let mut serialized = Serializer::with_formatter(buffer, formatter);
@@ -35,6 +35,7 @@ pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 				return Err(json_respond(
 					StatusCode::InternalServerError,
 					json!({
+						"notice": api_notice(),
 						"status": "500 Internal Server Error",
 						"error": "Failed to fetch data from Canister 2",
 						"date": chrono::Utc::now().to_rfc3339(),
@@ -69,6 +70,7 @@ pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 			_ => Err(json_respond(
 				StatusCode::InternalServerError,
 				json!({
+					"notice": api_notice(),
 					"status": "500 Internal Server Error",
 					"error": "Failed to fetch data from Canister 2",
 					"date": chrono::Utc::now().to_rfc3339(),
@@ -78,7 +80,8 @@ pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 	})
 }
 
-#[must_use] pub fn api_notice() -> Value {
+#[must_use]
+pub fn api_notice() -> Value {
 	json!({
 		"api": env!("CANISTER_NOTICE_API"),
 		"data": env!("CANISTER_NOTICE_DATA"),
@@ -86,7 +89,8 @@ pub async fn fetch_v2<R: for<'a> Deserialize<'a>>(
 	})
 }
 
-#[must_use] pub fn json_respond(status: StatusCode, value: Value) -> Response {
+#[must_use]
+pub fn json_respond(status: StatusCode, value: Value) -> Response {
 	Response::builder(status)
 		.header("Content-Type", "application/json")
 		.body(json_stringify(value))

@@ -62,6 +62,7 @@ pub async fn package_lookup(req: Request<()>) -> Result {
 				return Ok(json_respond(
 					BadRequest,
 					json!({
+						"notice": api_notice(),
 						"status": "400 Bad Request",
 						"error": "Missing query parameter: \'id\'",
 						"date": chrono::Utc::now().to_rfc3339(),
@@ -75,6 +76,7 @@ pub async fn package_lookup(req: Request<()>) -> Result {
 			return Ok(json_respond(
 				UnprocessableEntity,
 				json!({
+					"notice": api_notice(),
 					"status": "422 Unprocessable Entity",
 					"error": "Malformed query parameters",
 					"date": chrono::Utc::now().to_rfc3339(),
@@ -128,6 +130,7 @@ pub async fn package_lookup(req: Request<()>) -> Result {
 			return Ok(json_respond(
 				NotFound,
 				json!({
+					"notice": api_notice(),
 					"status": "404 Not Found",
 					"error": "Package not found",
 					"date": chrono::Utc::now().to_rfc3339(),

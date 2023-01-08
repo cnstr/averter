@@ -41,6 +41,7 @@ pub async fn repository_search_ranking(req: Request<()>) -> Result {
 				None => Ok(json_respond(
 					BadRequest,
 					json!({
+						"notice": api_notice(),
 						"status": "400 Bad Request",
 						"error": "Missing query parameter: \'query\' or \'ranking\'",
 						"date": chrono::Utc::now().to_rfc3339(),
@@ -54,6 +55,7 @@ pub async fn repository_search_ranking(req: Request<()>) -> Result {
 			Ok(json_respond(
 				UnprocessableEntity,
 				json!({
+					"notice": api_notice(),
 					"status": "422 Unprocessable Entity",
 					"error": "Malformed query parameters",
 					"date": chrono::Utc::now().to_rfc3339(),
