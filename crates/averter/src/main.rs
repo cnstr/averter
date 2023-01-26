@@ -1,25 +1,24 @@
-#[warn(clippy::all)]
-#[warn(clippy::correctness)]
-#[warn(clippy::suspicious)]
-#[warn(clippy::style)]
-#[warn(clippy::complexity)]
-#[warn(clippy::perf)]
-mod routes;
-pub mod utility;
-
+use crate::utility::json_respond;
 use serde_json::json;
 use std::{future::Future, pin::Pin};
-use tokio::io::Error;
-
 use tide::{
 	security::{CorsMiddleware, Origin},
 	utils::After,
 	Next, Request, Response, Result,
 	StatusCode::InternalServerError,
 };
+use tokio::io::Error;
 
-use crate::utility::json_respond;
+mod routes;
+mod utility;
 
+#[warn(clippy::all)]
+#[warn(clippy::correctness)]
+#[warn(clippy::suspicious)]
+#[warn(clippy::pedantic)]
+#[warn(clippy::style)]
+#[warn(clippy::complexity)]
+#[warn(clippy::perf)]
 #[tokio::main]
 async fn main() -> Result<()> {
 	let mut app = tide::new();
