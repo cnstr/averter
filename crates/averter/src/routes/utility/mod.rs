@@ -1,5 +1,5 @@
 mod health;
 mod index;
 
-pub use health::health;
-pub use index::index;
+pub use self::health::health;
+pub use self::index::index;
