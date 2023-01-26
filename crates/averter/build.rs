@@ -1,4 +1,4 @@
-use manifest::load_manifest;
+use manifest::{load_manifest, Conditional};
 use reqwest::ClientBuilder;
 use serde::Deserialize;
 use serde_json::from_str as from_json;
@@ -29,6 +29,7 @@ fn main() {
 	set_env("CANISTER_NOTICE_DATA", &manifest.notice.data);
 	set_env("CANISTER_NOTICE_API", &manifest.notice.api);
 
+	load_sentry_dsn(manifest.build.sentry_dsn);
 	load_k8s_info(manifest.build.k8s_control_plane);
 }
 
@@ -60,6 +61,16 @@ fn register_vergen_envs() {
 fn set_env(key: &str, value: &str) {
 	println!("Registering environment variable: {key}={value}");
 	println!("cargo:rustc-env={key}={value}");
+}
+
+/// Loads the Sentry DSN from the manifest
+fn load_sentry_dsn(dsn: Conditional) {
+	let sentry_dsn = match cfg!(debug_assertions) {
+		true => &dsn.debug,
+		false => &dsn.release,
+	};
+
+	set_env("CANISTER_SENTRY_DSN", sentry_dsn);
 }
 
 /// Fetches the Kubernetes version from the control plane

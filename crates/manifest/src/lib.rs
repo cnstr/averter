@@ -35,7 +35,7 @@ pub struct Meta {
 /// Strongly-typed build section
 #[derive(Deserialize)]
 pub struct Build {
-	// pub sentry_dsn: Conditional,
+	pub sentry_dsn: Conditional,
 	pub k8s_control_plane: String,
 }
 

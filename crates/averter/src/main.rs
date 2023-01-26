@@ -1,13 +1,13 @@
-use crate::utility::json_respond;
+use anyhow::Error;
+use sentry::{init, ClientOptions};
 use serde_json::json;
 use std::{future::Future, pin::Pin};
 use tide::{
 	security::{CorsMiddleware, Origin},
 	utils::After,
 	Next, Request, Response, Result,
-	StatusCode::InternalServerError,
 };
-use tokio::io::Error;
+use utility::{api_respond, create_canister_client, handle_error};
 
 mod routes;
 mod utility;
@@ -21,6 +21,16 @@ mod utility;
 #[warn(clippy::perf)]
 #[tokio::main]
 async fn main() -> Result<()> {
+	let _guard = init((
+		env!("CANISTER_SENTRY_DSN"),
+		ClientOptions {
+			release: Some(env!("VERGEN_BUILD_SEMVER").into()),
+			..Default::default()
+		},
+	));
+
+	create_canister_client();
+
 	let mut app = tide::new();
 	let cors = CorsMiddleware::new().allow_origin(Origin::from("*"));
 
@@ -28,14 +38,8 @@ async fn main() -> Result<()> {
 	app.with(response_time);
 	app.with(After(|mut res: Response| async {
 		if let Some(err) = res.downcast_error::<Error>() {
-			println!("Error: {err}");
-			res = json_respond(
-				InternalServerError,
-				json!({
-					"message": "500 Internal Server Error",
-					"date": chrono::Utc::now().to_rfc3339(),
-				}),
-			);
+			handle_error(err);
+			return api_respond(500, json!({}));
 		}
 
 		Ok(res)
@@ -62,7 +66,6 @@ async fn main() -> Result<()> {
 	});
 
 	app.listen("0.0.0.0:3000").await?;
-
 	Ok(())
 }
 
@@ -76,7 +79,6 @@ fn response_time<'a>(
 		let elapsed = start.elapsed().as_millis();
 
 		res.insert_header("X-Response-Time", elapsed.to_string());
-
 		Ok(res)
 	})
 }
