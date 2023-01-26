@@ -1,5 +1,6 @@
 [workspace]
 members = [
 	"crates/averter",
-	"crates/deploy"
+	"crates/deploy",
+	"crates/manifest"
 ]
