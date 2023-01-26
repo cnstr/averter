@@ -41,13 +41,11 @@ pub async fn repository_search_ranking(req: Request<()>) -> Result {
 			Some(query) => return repository_search(query).await,
 			None => match query.ranking {
 				Some(ranking) => return repository_ranking(ranking).await,
-				None => {
-					return error_respond(400, "Missing query paramter \'query\' or \'ranking\'")
-				}
+				None => error_respond(400, "Missing query paramter \'query\' or \'ranking\'"),
 			},
 		},
 
-		Err(_) => return error_respond(422, "Malformed query parameters"),
+		Err(_) => error_respond(422, "Malformed query parameters"),
 	}
 }
 

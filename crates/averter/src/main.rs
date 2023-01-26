@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
 
 	app.with(cors);
 	app.with(response_time);
-	app.with(After(|mut res: Response| async {
+	app.with(After(|res: Response| async {
 		if let Some(err) = res.downcast_error::<Error>() {
 			handle_error(err);
 			return api_respond(500, json!({}));
