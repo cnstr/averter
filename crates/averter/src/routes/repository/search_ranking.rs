@@ -1,20 +1,17 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
-use crate::utility::{api_notice, fetch_v2, json_respond};
+use crate::utility::{api_respond, error_respond, fetch_v2};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tide::{
-	prelude::Deserialize,
-	Request, Result,
-	StatusCode::{BadRequest, Ok as OK, UnprocessableEntity},
-};
+use tide::{Request, Result};
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Query {
 	query: Option<String>,
 	ranking: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Data {
 	slug: String,
 	suite: String,
@@ -26,8 +23,14 @@ struct Data {
 	component: Option<String>,
 }
 
-#[derive(Deserialize)]
-struct Response {
+#[derive(Serialize, Deserialize)]
+struct CanisterQuery {
+	q: Option<String>,
+	rank: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CanisterResponse {
 	date: String,
 	data: Vec<Data>,
 }
@@ -38,39 +41,29 @@ pub async fn repository_search_ranking(req: Request<()>) -> Result {
 			Some(query) => return repository_search(query).await,
 			None => match query.ranking {
 				Some(ranking) => return repository_ranking(ranking).await,
-				None => Ok(json_respond(
-					BadRequest,
-					json!({
-						"notice": api_notice(),
-						"status": "400 Bad Request",
-						"error": "Missing query parameter: \'query\' or \'ranking\'",
-						"date": chrono::Utc::now().to_rfc3339(),
-					}),
-				)),
+				None => {
+					return error_respond(400, "Missing query paramter \'query\' or \'ranking\'")
+				}
 			},
 		},
 
-		Err(err) => {
-			println!("Error: {err}");
-			Ok(json_respond(
-				UnprocessableEntity,
-				json!({
-					"notice": api_notice(),
-					"status": "422 Unprocessable Entity",
-					"error": "Malformed query parameters",
-					"date": chrono::Utc::now().to_rfc3339(),
-				}),
-			))
-		}
+		Err(_) => return error_respond(422, "Malformed query parameters"),
 	}
 }
 
 async fn repository_search(query: String) -> Result {
-	let query = HashMap::from([("q", query.as_str())]);
-	let mut response = match fetch_v2::<Response>("/jailbreak/repository/search", query).await {
-		Ok(response) => response,
-		Err(err) => return Ok(err),
+	let query = CanisterQuery {
+		q: Some(query),
+		rank: None,
 	};
+
+	let mut response =
+		match fetch_v2::<CanisterQuery, CanisterResponse>(query, "/jailbreak/repository/search")
+			.await
+		{
+			Ok(response) => response,
+			Err(err) => return err,
+		};
 
 	let data = response.data.iter_mut();
 	let data = data
@@ -90,15 +83,12 @@ async fn repository_search(query: String) -> Result {
 		})
 		.collect::<Vec<Value>>();
 
-	Ok(json_respond(
-		OK,
+	api_respond(
+		200,
 		json!({
-			"notice": api_notice(),
-			"status": "Successful",
-			"date": response.date,
 			"data": data,
 		}),
-	))
+	)
 }
 
 async fn repository_ranking(ranking: String) -> Result {
@@ -107,11 +97,18 @@ async fn repository_ranking(ranking: String) -> Result {
 		.filter(|rank| matches!(rank, &"1" | &"2" | &"3" | &"4" | &"5"))
 		.collect::<HashSet<&str>>();
 
-	let query = HashMap::from([("rank", "*")]);
-	let mut response = match fetch_v2::<Response>("/jailbreak/repository/ranking", query).await {
-		Ok(response) => response,
-		Err(err) => return Ok(err),
+	let query = CanisterQuery {
+		q: None,
+		rank: Some("*".to_owned()),
 	};
+
+	let mut response =
+		match fetch_v2::<CanisterQuery, CanisterResponse>(query, "/jailbreak/repository/ranking")
+			.await
+		{
+			Ok(response) => response,
+			Err(err) => return err,
+		};
 
 	let data = response.data.iter_mut();
 	let data = data
@@ -135,13 +132,10 @@ async fn repository_ranking(ranking: String) -> Result {
 		})
 		.collect::<Vec<Value>>();
 
-	Ok(json_respond(
-		OK,
+	api_respond(
+		200,
 		json!({
-			"notice": api_notice(),
-			"status": "Successful",
-			"date": chrono::Utc::now().to_rfc3339(),
 			"data": data,
 		}),
-	))
+	)
 }

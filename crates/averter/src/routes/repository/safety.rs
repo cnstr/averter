@@ -1,26 +1,26 @@
-use crate::utility::{api_notice, fetch_v2, json_respond};
+use crate::utility::{api_respond, error_respond, fetch_v2};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::HashMap;
-use tide::{
-	prelude::Deserialize,
-	Request, Result,
-	StatusCode::{BadRequest, Ok as OK, UnprocessableEntity},
-};
+use tide::{Request, Result};
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Query {
 	query: Option<String>,
 	queries: Option<String>,
 }
-
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Data {
 	uri: String,
 	safe: bool,
 }
 
-#[derive(Deserialize)]
-struct Response {
+#[derive(Serialize, Deserialize)]
+struct CanisterQuery {
+	uris: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CanisterResponse {
 	date: String,
 	count: u32,
 	data: Vec<Data>,
@@ -33,52 +33,33 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 			None => match query.query {
 				Some(query) => (query, true),
 				None => {
-					return Ok(json_respond(
-						BadRequest,
-						json!({
-							"notice": api_notice(),
-							"status": "400 Bad Request",
-							"error": "Missing query parameters",
-							"date": chrono::Utc::now().to_rfc3339(),
-						}),
-					));
+					return error_respond(400, "Missing query paramter \'query\' or \'queries\'")
 				}
 			},
 		},
 
-		Err(err) => {
-			println!("Error: {err}");
-			return Ok(json_respond(
-				UnprocessableEntity,
-				json!({
-					"notice": api_notice(),
-					"status": "422 Unprocessable Entity",
-					"error": "Malformed query parameters",
-					"date": chrono::Utc::now().to_rfc3339(),
-				}),
-			));
-		}
+		Err(_) => return error_respond(422, "Malformed query parameters"),
 	};
 
-	let query = HashMap::from([("uris", uris.as_str())]);
-	let mut response = match fetch_v2::<Response>("/jailbreak/repository/safety", query).await {
-		Ok(response) => response,
-		Err(err) => return Ok(err),
-	};
+	let query = CanisterQuery { uris };
+	let mut response =
+		match fetch_v2::<CanisterQuery, CanisterResponse>(query, "/jailbreak/repository/safety")
+			.await
+		{
+			Ok(response) => response,
+			Err(err) => return err,
+		};
 
 	match is_single && response.count == 1 {
-		true => Ok(json_respond(
-			OK,
+		true => api_respond(
+			200,
 			json!({
-				"notice": api_notice(),
-				"status": "Successful",
-				"date": response.date,
 				"data": match response.data[0].safe {
 					true => "safe",
 					false => "unsafe",
 				}
 			}),
-		)),
+		),
 
 		false => {
 			let data = response.data.iter_mut();
@@ -96,15 +77,7 @@ pub async fn repository_safety(req: Request<()>) -> Result {
 				})
 				.collect::<Vec<Value>>();
 
-			Ok(json_respond(
-				OK,
-				json!({
-					"notice": api_notice(),
-					"status": "Successful",
-					"date": response.date,
-					"data": data
-				}),
-			))
+			api_respond(200, json!({ "data": data }))
 		}
 	}
 }
