@@ -1,14 +1,12 @@
+use crate::utility::http_respond;
 use serde_json::json;
-use tide::{Request, Result, StatusCode::Ok as OK};
-
-use crate::utility::{api_notice, json_respond};
+use tide::{Request, Result};
 
 pub async fn health(_req: Request<()>) -> Result {
-	Ok(json_respond(
-		OK,
+	http_respond(
+		200,
 		json!({
-			"notice": api_notice(),
-			"status": "OK"
+			"healthy": true
 		}),
-	))
+	)
 }
