@@ -1,19 +1,14 @@
-use std::collections::HashMap;
+use crate::utility::{api_respond, error_respond, fetch_v2};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use tide::{Request, Result};
 
-use crate::utility::{api_notice, fetch_v2, json_respond};
-use serde_json::json;
-use tide::{
-	prelude::Deserialize,
-	Request, Result,
-	StatusCode::{BadRequest, NotFound, Ok as OK, UnprocessableEntity},
-};
-
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Query {
 	id: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Repository {
 	slug: String,
 	suite: String,
@@ -25,7 +20,7 @@ struct Repository {
 	component: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Data {
 	package: String,
 	architecture: String,
@@ -48,8 +43,11 @@ struct Data {
 	repository: Repository,
 }
 
-#[derive(Deserialize)]
-struct Response {
+#[derive(Serialize, Deserialize)]
+struct CanisterQuery {}
+
+#[derive(Serialize, Deserialize)]
+struct CanisterResponse {
 	date: String,
 	data: Vec<Data>,
 }
@@ -58,43 +56,22 @@ pub async fn package_lookup(req: Request<()>) -> Result {
 	let id = match req.query::<Query>() {
 		Ok(query) => match query.id {
 			Some(query) => query,
-			None => {
-				return Ok(json_respond(
-					BadRequest,
-					json!({
-						"notice": api_notice(),
-						"status": "400 Bad Request",
-						"error": "Missing query parameter: \'id\'",
-						"date": chrono::Utc::now().to_rfc3339(),
-					}),
-				))
-			}
+			None => return error_respond(400, "Missing query parameter: \'id\'"),
 		},
 
-		Err(err) => {
-			println!("Error: {err}");
-			return Ok(json_respond(
-				UnprocessableEntity,
-				json!({
-					"notice": api_notice(),
-					"status": "422 Unprocessable Entity",
-					"error": "Malformed query parameters",
-					"date": chrono::Utc::now().to_rfc3339(),
-				}),
-			));
-		}
+		Err(_) => return error_respond(422, "422 Unprocessable Entity"),
 	};
 
-	let query = HashMap::from([]); // No queries necessary here
+	let query = CanisterQuery {}; // No query parameters
 	let uri = &format!("/jailbreak/package/{id}").to_owned();
 
-	let mut response = match fetch_v2::<Response>(uri, query).await {
+	let mut response = match fetch_v2::<CanisterQuery, CanisterResponse>(query, uri).await {
 		Ok(response) => response,
-		Err(err) => return Ok(err),
+		Err(err) => return err,
 	};
 
 	let mut data = response.data.iter_mut();
-	let data = data.find_map(|item| match item.is_current {
+	let data: Option<Value> = data.find_map(|item| match item.is_current {
 		true => Some(json!({
 			"identifier": item.package,
 			"architecture": item.architecture,
@@ -126,26 +103,13 @@ pub async fn package_lookup(req: Request<()>) -> Result {
 
 	match &data {
 		Some(_) => (),
-		None => {
-			return Ok(json_respond(
-				NotFound,
-				json!({
-					"notice": api_notice(),
-					"status": "404 Not Found",
-					"error": "Package not found",
-					"date": chrono::Utc::now().to_rfc3339(),
-				}),
-			))
-		}
+		None => return error_respond(404, "Package not found"),
 	};
 
-	Ok(json_respond(
-		OK,
+	api_respond(
+		200,
 		json!({
-			"notice": api_notice(),
-			"message": "Successful",
-			"date": response.date,
 			"data": data,
 		}),
-	))
+	)
 }

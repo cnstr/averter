@@ -1,19 +1,14 @@
-use std::collections::HashMap;
-
-use crate::utility::{api_notice, fetch_v2, json_respond};
+use crate::utility::{api_respond, error_respond, fetch_v2};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tide::{
-	prelude::Deserialize,
-	Request, Result,
-	StatusCode::{BadRequest, Ok as OK, UnprocessableEntity},
-};
+use tide::{Request, Result};
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Query {
 	packages: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Repository {
 	slug: String,
 	suite: String,
@@ -25,7 +20,7 @@ struct Repository {
 	component: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Data {
 	package: String,
 	architecture: String,
@@ -46,8 +41,13 @@ struct Data {
 	repository: Repository,
 }
 
-#[derive(Deserialize)]
-struct Response {
+#[derive(Serialize, Deserialize)]
+struct CanisterQuery {
+	ids: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CanisterResponse {
 	date: String,
 	data: Vec<Data>,
 }
@@ -56,37 +56,21 @@ pub async fn package_multi_lookup(req: Request<()>) -> Result {
 	let packages = match req.query::<Query>() {
 		Ok(query) => match query.packages {
 			Some(query) => query,
-			None => {
-				return Ok(json_respond(
-					BadRequest,
-					json!({
-						"notice": api_notice(),
-						"status": "400 Bad Request",
-						"error": "Missing query parameter: \'packages\'",
-						"date": chrono::Utc::now().to_rfc3339(),
-					}),
-				))
-			}
+			None => return error_respond(400, "Missing query parameter: \'packages\'"),
 		},
 
-		Err(err) => {
-			println!("Error: {err}");
-			return Ok(json_respond(
-				UnprocessableEntity,
-				json!({
-					"notice": api_notice(),
-					"status": "422 Unprocessable Entity",
-					"error": "Malformed query parameters",
-					"date": chrono::Utc::now().to_rfc3339(),
-				}),
-			));
-		}
+		Err(_) => return error_respond(422, "Malformed query parameters"),
 	};
 
-	let query = HashMap::from([("ids", packages.as_str())]);
-	let mut response = match fetch_v2::<Response>("/jailbreak/package/multi", query).await {
+	let query = CanisterQuery { ids: packages };
+	let mut response = match fetch_v2::<CanisterQuery, CanisterResponse>(
+		query,
+		"/jailbreak/package/multi",
+	)
+	.await
+	{
 		Ok(response) => response,
-		Err(err) => return Ok(err),
+		Err(err) => return err,
 	};
 
 	let data = response.data.iter_mut();
@@ -126,13 +110,10 @@ pub async fn package_multi_lookup(req: Request<()>) -> Result {
 		})
 		.collect::<Vec<Value>>();
 
-	Ok(json_respond(
-		OK,
+	api_respond(
+		200,
 		json!({
-			"notice": api_notice(),
-			"message": "Successful",
-			"date": response.date,
 			"data": data,
 		}),
-	))
+	)
 }
