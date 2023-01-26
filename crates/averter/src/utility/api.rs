@@ -8,7 +8,7 @@ use tide::Result as TideResult;
 struct HTTPError {
 	message: String,
 	date: String,
-	error: String,
+	error: Option<String>,
 }
 
 /// Merges two JSON objects together in the order of left, right
@@ -54,7 +54,8 @@ pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
 	query: Q,
 	url: &str,
 ) -> Result<R, TideResult> {
-	let request = match canister().get(url).query(&query) {
+	let url = format!("/v2{}", url);
+	let request = match canister().get(&url).query(&query) {
 		Ok(request) => request,
 		Err(err) => {
 			handle_error(&err.into_inner());
@@ -71,7 +72,7 @@ pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
 	};
 
 	if cfg!(debug_assertions) {
-		println!("v2 -> {} {}", response.status(), url);
+		println!("v2 -> {} {}", response.status(), &url);
 	}
 
 	match response.status() {
@@ -96,7 +97,12 @@ pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
 				}
 			};
 
-			Err(error_respond(400, &response.error))
+			let response = match response.error {
+				Some(error) => error,
+				None => "Unknown error".to_string(),
+			};
+
+			Err(error_respond(400, &response))
 		}
 
 		_ => Err(error_respond(500, "Failed to fetch from Canister")),
