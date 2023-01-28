@@ -65,8 +65,7 @@ pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
 
 	let mut response = match canister().send(request).await {
 		Ok(response) => response,
-		Err(err) => {
-			handle_error(&err.into_inner());
+		Err(_) => {
 			return Err(error_respond(500, "Failed to execute Canister query"));
 		}
 	};
@@ -79,8 +78,7 @@ pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
 		StatusCode::Ok => {
 			let response: R = match response.body_json().await {
 				Ok(response) => response,
-				Err(err) => {
-					handle_error(&err.into_inner());
+				Err(_) => {
 					return Err(error_respond(500, "Failed to parse Canister response"));
 				}
 			};
@@ -91,8 +89,7 @@ pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
 		StatusCode::BadRequest | StatusCode::NotFound => {
 			let response: HTTPError = match response.body_json().await {
 				Ok(response) => response,
-				Err(err) => {
-					handle_error(&err.into_inner());
+				Err(_) => {
 					return Err(error_respond(500, "Failed to parse Canister response"));
 				}
 			};
