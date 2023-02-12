@@ -1,9 +1,10 @@
-use crate::utility::http_respond;
+use crate::utility::{http_respond, Request, Response};
+use actix_web::get;
 use chrono::{Datelike, Utc};
 use serde_json::json;
-use tide::{Request, Result};
 
-pub async fn index(req: Request<()>) -> Result {
+#[get("/")]
+pub async fn index(req: Request) -> Response {
 	let name = format!(
 		"{} ({})",
 		env!("CANISTER_PRODUCTION_NAME"),
@@ -28,9 +29,11 @@ pub async fn index(req: Request<()>) -> Result {
 	let current_date = Utc::now().date_naive().to_string();
 	let current_epoch = Utc::now().timestamp();
 
-	let remote_address = req.remote().unwrap_or("Unknown");
-	let user_agent = match req.header("User-Agent") {
-		Some(user_agent) => user_agent.as_str(),
+	let connection_info = req.connection_info();
+	let remote_address = connection_info.realip_remote_addr().unwrap_or("Unknown");
+
+	let user_agent = match req.headers().get("User-Agent") {
+		Some(user_agent) => user_agent.to_str().unwrap_or("Unknown"),
 		None => "Unknown",
 	};
 

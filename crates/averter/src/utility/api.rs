@@ -1,10 +1,9 @@
-use super::{canister, error_respond, handle_error, LRU};
+use super::{canister, error_respond, handle_error, Response, LRU};
 use lazy_static::lazy_static;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{from_str, to_string, to_value, Value};
 use std::sync::Arc;
 use surf::StatusCode;
-use tide::Result as TideResult;
 use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
@@ -60,7 +59,7 @@ lazy_static! {
 pub async fn fetch_v2<Q: Serialize, R: Serialize + DeserializeOwned>(
 	query: Q,
 	url: &str,
-) -> Result<R, TideResult> {
+) -> Result<R, Response> {
 	let mut cache = CACHE.lock().await;
 	let cache_key = format!("{}{}", url, to_string(&query).unwrap_or("".to_string()));
 

@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
-use crate::utility::{api_respond, error_respond, fetch_v2};
+use crate::utility::{api_respond, error_respond, fetch_v2, Request, Response};
+use actix_web::{get, web::Query};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tide::{Request, Result};
 
 #[derive(Serialize, Deserialize)]
-struct Query {
+struct Params {
 	query: Option<String>,
 	ranking: Option<String>,
 }
@@ -35,21 +35,22 @@ struct CanisterResponse {
 	data: Vec<Data>,
 }
 
-pub async fn repository_search_ranking(req: Request<()>) -> Result {
-	match req.query::<Query>() {
-		Ok(query) => match query.query {
+#[get("/community/repositories/search")]
+pub async fn search_ranking(req: Request) -> Response {
+	match Query::<Params>::from_query(req.query_string()) {
+		Ok(query) => match query.query.clone() {
 			Some(query) => return repository_search(query).await,
-			None => match query.ranking {
+			None => match query.ranking.clone() {
 				Some(ranking) => return repository_ranking(ranking).await,
-				None => error_respond(400, "Missing query paramter \'query\' or \'ranking\'"),
+				None => error_respond(400, "Missing query parameter \'query\' or \'ranking\'"),
 			},
 		},
 
-		Err(_) => error_respond(422, "Malformed query parameters"),
+		Err(_) => error_respond(400, "Missing query parameter \'query\' or \'ranking\'"),
 	}
 }
 
-async fn repository_search(query: String) -> Result {
+async fn repository_search(query: String) -> Response {
 	let query = CanisterQuery {
 		q: Some(query),
 		rank: None,
@@ -89,7 +90,7 @@ async fn repository_search(query: String) -> Result {
 	)
 }
 
-async fn repository_ranking(ranking: String) -> Result {
+async fn repository_ranking(ranking: String) -> Response {
 	let ranks = ranking
 		.split(',')
 		.filter(|rank| matches!(rank, &"1" | &"2" | &"3" | &"4" | &"5"))

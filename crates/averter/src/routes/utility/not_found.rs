@@ -1,7 +1,6 @@
-use crate::utility::api_respond;
+use crate::utility::{api_respond, Request, Response};
 use serde_json::json;
-use tide::{Request, Result};
 
-pub async fn not_found(_req: Request<()>) -> Result {
+pub async fn not_found(_req: Request) -> Response {
 	api_respond(404, json!({}))
 }

@@ -1,10 +1,10 @@
-use crate::utility::{api_respond, error_respond, fetch_v2};
+use crate::utility::{api_respond, error_respond, fetch_v2, Request, Response};
+use actix_web::{get, web::Query};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tide::{Request, Result};
 
 #[derive(Serialize, Deserialize)]
-struct Query {
+struct Params {
 	query: Option<String>,
 	queries: Option<String>,
 }
@@ -26,19 +26,20 @@ struct CanisterResponse {
 	data: Vec<Data>,
 }
 
-pub async fn repository_safety(req: Request<()>) -> Result {
-	let (uris, is_single) = match req.query::<Query>() {
-		Ok(query) => match query.queries {
+#[get("/community/repositories/safety")]
+pub async fn safety(req: Request) -> Response {
+	let (uris, is_single) = match Query::<Params>::from_query(req.query_string()) {
+		Ok(query) => match query.queries.clone() {
 			Some(queries) => (queries, false),
-			None => match query.query {
+			None => match query.query.clone() {
 				Some(query) => (query, true),
 				None => {
-					return error_respond(400, "Missing query paramter \'query\' or \'queries\'")
+					return error_respond(400, "Missing query parameter: \'query\' or \'queries\'");
 				}
 			},
 		},
 
-		Err(_) => return error_respond(422, "Malformed query parameters"),
+		Err(_) => return error_respond(400, "Missing query paramter \'query\' or \'queries\'"),
 	};
 
 	let query = CanisterQuery { uris };

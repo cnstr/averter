@@ -1,7 +1,3 @@
-mod package;
-mod repository;
-mod utility;
-
-pub use self::package::*;
-pub use self::repository::*;
-pub use self::utility::*;
+pub mod package;
+pub mod repository;
+pub mod utility;

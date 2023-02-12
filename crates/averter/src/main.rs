@@ -1,13 +1,11 @@
-use anyhow::Error;
+use actix_cors::Cors;
+use actix_web::{dev::Service, web, App, HttpServer};
+use futures_util::future::FutureExt;
+use http::header::HeaderName;
 use sentry::{init, ClientOptions};
-use serde_json::json;
-use std::{future::Future, pin::Pin};
-use tide::{
-	security::{CorsMiddleware, Origin},
-	utils::After,
-	Next, Request, Response, Result,
-};
-use utility::{api_respond, create_canister_client, handle_error};
+use sentry_actix::Sentry;
+use std::{env::set_var, io::Result, str::FromStr, time::Instant};
+use utility::create_canister_client;
 
 mod routes;
 mod utility;
@@ -19,7 +17,9 @@ mod utility;
 #[warn(clippy::style)]
 #[warn(clippy::complexity)]
 #[warn(clippy::perf)]
-#[tokio::main]
+
+/// The main function of the Averter service
+#[actix_web::main]
 async fn main() -> Result<()> {
 	let _guard = init((
 		env!("CANISTER_SENTRY_DSN"),
@@ -30,57 +30,37 @@ async fn main() -> Result<()> {
 		},
 	));
 
+	// Enable backtraces for Sentry
+	set_var("RUST_BACKTRACE", "1");
 	create_canister_client();
 
-	let mut app = tide::new();
-	let cors = CorsMiddleware::new().allow_origin(Origin::from("*"));
-
-	app.with(cors);
-	app.with(response_time);
-	app.with(After(|res: Response| async {
-		if let Some(err) = res.downcast_error::<Error>() {
-			handle_error(err);
-			return api_respond(500, json!({}));
-		}
-
-		Ok(res)
-	}));
-
-	app.at("/").get(routes::index);
-	app.at("/healthz").get(routes::health);
-
-	app.at("/community/repositories").nest({
-		let mut app = tide::new();
-		app.at("/safety").get(routes::repository_safety);
-		app.at("/search").get(routes::repository_search_ranking);
-
-		app
-	});
-
-	app.at("/community/packages").nest({
-		let mut app = tide::new();
-		app.at("/").get(routes::package_lookup);
-		app.at("/lookup").get(routes::package_multi_lookup);
-		app.at("/search").get(routes::package_search);
-
-		app
-	});
-
-	app.at("*").all(routes::not_found);
-	app.listen("0.0.0.0:3000").await?;
-	Ok(())
-}
-
-fn response_time<'a>(
-	req: Request<()>,
-	next: Next<'a, ()>,
-) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
-	let start = std::time::Instant::now();
-	Box::pin(async move {
-		let mut res = next.run(req).await;
-		let elapsed = start.elapsed().as_millis();
-
-		res.insert_header("X-Response-Time", elapsed.to_string());
-		Ok(res)
+	HttpServer::new(|| {
+		App::new()
+			.wrap_fn(|req, next| {
+				let start = Instant::now();
+				next.call(req).map(move |res| {
+					let elapsed = start.elapsed().as_millis();
+					res.map(|mut res| {
+						res.headers_mut().insert(
+							HeaderName::from_str("X-Response-Time").unwrap(),
+							format!("{}", elapsed).parse().unwrap(),
+						);
+						res
+					})
+				})
+			})
+			.wrap(Sentry::new())
+			.wrap(Cors::default().allow_any_origin().send_wildcard())
+			.default_service(web::to(routes::utility::not_found))
+			.service(routes::utility::index)
+			.service(routes::utility::health)
+			.service(routes::package::lookup)
+			.service(routes::package::multi_lookup)
+			.service(routes::package::search)
+			.service(routes::repository::safety)
+			.service(routes::repository::search_ranking)
 	})
+	.bind(("0.0.0.0", 3000))?
+	.run()
+	.await
 }

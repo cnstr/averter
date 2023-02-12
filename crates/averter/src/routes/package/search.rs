@@ -1,11 +1,11 @@
-use crate::utility::{api_respond, error_respond, fetch_v2};
+use crate::utility::{api_respond, error_respond, fetch_v2, Request, Response};
+use actix_web::{get, web::Query};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tide::{Request, Result};
 
 #[derive(Serialize, Deserialize)]
-struct Query {
-	query: Option<String>,
+struct Params {
+	query: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -52,14 +52,11 @@ struct CanisterResponse {
 	data: Vec<Data>,
 }
 
-pub async fn package_search(req: Request<()>) -> Result {
-	let query = match req.query::<Query>() {
-		Ok(query) => match query.query {
-			Some(query) => query,
-			None => return error_respond(400, "Missing query parameter: \'query\'"),
-		},
-
-		Err(_) => return error_respond(422, "Malformed query parameters"),
+#[get("/community/packages/search")]
+pub async fn search(req: Request) -> Response {
+	let query = match Query::<Params>::from_query(req.query_string()) {
+		Ok(query) => query.query.clone(),
+		Err(_) => return error_respond(400, "Missing query parameter: \'query\'"),
 	};
 
 	let query = CanisterQuery { q: query };

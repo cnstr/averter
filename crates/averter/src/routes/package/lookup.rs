@@ -1,11 +1,11 @@
-use crate::utility::{api_respond, error_respond, fetch_v2};
+use crate::utility::{api_respond, error_respond, fetch_v2, Request, Response};
+use actix_web::{get, web::Query};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tide::{Request, Result};
 
 #[derive(Serialize, Deserialize)]
-struct Query {
-	id: Option<String>,
+struct Params {
+	id: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -52,14 +52,11 @@ struct CanisterResponse {
 	data: Vec<Data>,
 }
 
-pub async fn package_lookup(req: Request<()>) -> Result {
-	let id = match req.query::<Query>() {
-		Ok(query) => match query.id {
-			Some(query) => query,
-			None => return error_respond(400, "Missing query parameter: \'id\'"),
-		},
-
-		Err(_) => return error_respond(422, "422 Unprocessable Entity"),
+#[get("/community/packages")]
+pub async fn lookup(req: Request) -> Response {
+	let id = match Query::<Params>::from_query(req.query_string()) {
+		Ok(query) => query.id.clone(),
+		Err(_) => return error_respond(400, "Missing query parameter: \'id\'"),
 	};
 
 	let query = CanisterQuery {}; // No query parameters

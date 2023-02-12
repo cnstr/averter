@@ -1,11 +1,11 @@
-use crate::utility::{api_respond, error_respond, fetch_v2};
+use crate::utility::{api_respond, error_respond, fetch_v2, Request, Response};
+use actix_web::{get, web::Query};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tide::{Request, Result};
 
 #[derive(Serialize, Deserialize)]
-struct Query {
-	packages: Option<String>,
+struct Params {
+	packages: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -52,14 +52,11 @@ struct CanisterResponse {
 	data: Vec<Data>,
 }
 
-pub async fn package_multi_lookup(req: Request<()>) -> Result {
-	let packages = match req.query::<Query>() {
-		Ok(query) => match query.packages {
-			Some(query) => query,
-			None => return error_respond(400, "Missing query parameter: \'packages\'"),
-		},
-
-		Err(_) => return error_respond(422, "Malformed query parameters"),
+#[get("/community/packages/lookup")]
+pub async fn multi_lookup(req: Request) -> Response {
+	let packages = match Query::<Params>::from_query(req.query_string()) {
+		Ok(query) => query.packages.clone(),
+		Err(_) => return error_respond(400, "Missing query parameter: \'packages\'"),
 	};
 
 	let query = CanisterQuery { ids: packages };
