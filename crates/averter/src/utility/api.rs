@@ -1,8 +1,11 @@
-use super::{canister, error_respond, handle_error};
+use super::{canister, error_respond, handle_error, LRU};
+use lazy_static::lazy_static;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::{to_value, Value};
+use serde_json::{from_str, to_string, to_value, Value};
+use std::sync::Arc;
 use surf::StatusCode;
 use tide::Result as TideResult;
+use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 struct HTTPError {
@@ -48,12 +51,32 @@ fn merge_json_value(left: &mut Value, right: Value) {
 	}
 }
 
+lazy_static! {
+	pub static ref CACHE: Arc<Mutex<LRU>> = Arc::new(Mutex::new(LRU::new()));
+}
+
 /// Fetches data from the Canister v2 API
 /// This function serializes the responses into strict types
-pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
+pub async fn fetch_v2<Q: Serialize, R: Serialize + DeserializeOwned>(
 	query: Q,
 	url: &str,
 ) -> Result<R, TideResult> {
+	let mut cache = CACHE.lock().await;
+	let cache_key = format!("{}{}", url, to_string(&query).unwrap_or("".to_string()));
+
+	// Avoid a match here to avoid nested matches
+	if let Some(value) = cache.get(cache_key.clone()) {
+		let response: R = match from_str(&value) {
+			Ok(response) => response,
+			Err(err) => {
+				handle_error(&err.into());
+				return Err(error_respond(500, "Failed to parse Canister response"));
+			}
+		};
+
+		return Ok(response);
+	}
+
 	let url = format!("/v2{}", url);
 	let request = match canister().get(&url).query(&query) {
 		Ok(request) => request,
@@ -82,6 +105,15 @@ pub async fn fetch_v2<Q: Serialize, R: DeserializeOwned>(
 					return Err(error_respond(500, "Failed to parse Canister response"));
 				}
 			};
+
+			match to_string(&response) {
+				Ok(response) => {
+					cache.insert(cache_key, response);
+				}
+				Err(err) => {
+					handle_error(&err.into());
+				}
+			}
 
 			Ok(response)
 		}

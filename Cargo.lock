@@ -335,6 +335,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "http",
+ "lazy_static",
  "manifest",
  "once_cell",
  "reqwest",

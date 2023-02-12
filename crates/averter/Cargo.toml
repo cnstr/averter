@@ -10,6 +10,7 @@ build = "build.rs"
 anyhow = "1.0.68"
 chrono = "0.4.23"
 http = "0.2.8"
+lazy_static = "1.4.0"
 once_cell = "1.17.0"
 sentry = { version = "0.29.2", features = ["anyhow"] }
 serde = { version = "1.0.152", features = ["std", "derive"] }
