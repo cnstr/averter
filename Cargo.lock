@@ -498,6 +498,7 @@ dependencies = [
  "actix-web",
  "anyhow",
  "chrono",
+ "futures-util",
  "http",
  "lazy_static",
  "manifest",
