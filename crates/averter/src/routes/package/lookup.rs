@@ -62,10 +62,11 @@ pub async fn lookup(req: Request) -> Response {
 	let query = CanisterQuery {}; // No query parameters
 	let uri = &format!("/jailbreak/package/{id}").to_owned();
 
-	let mut response = match fetch_v2::<CanisterQuery, CanisterResponse>(query, uri).await {
-		Ok(response) => response,
-		Err(err) => return err,
-	};
+	let (mut response, is_cached) =
+		match fetch_v2::<CanisterQuery, CanisterResponse>(query, uri).await {
+			Ok(response) => response,
+			Err(err) => return err,
+		};
 
 	let mut data = response.data.iter_mut();
 	let data: Option<Value> = data.find_map(|item| match item.is_current {
@@ -105,6 +106,7 @@ pub async fn lookup(req: Request) -> Response {
 
 	api_respond(
 		200,
+		is_cached,
 		json!({
 			"data": data,
 		}),

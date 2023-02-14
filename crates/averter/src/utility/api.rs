@@ -59,7 +59,7 @@ lazy_static! {
 pub async fn fetch_v2<Q: Serialize, R: Serialize + DeserializeOwned>(
 	query: Q,
 	url: &str,
-) -> Result<R, Response> {
+) -> Result<(R, bool), Response> {
 	let mut cache = CACHE.lock().await;
 	let cache_key = format!("{}{}", url, to_string(&query).unwrap_or("".to_string()));
 
@@ -73,7 +73,7 @@ pub async fn fetch_v2<Q: Serialize, R: Serialize + DeserializeOwned>(
 			}
 		};
 
-		return Ok(response);
+		return Ok((response, true));
 	}
 
 	let url = format!("/v2{}", url);
@@ -114,7 +114,7 @@ pub async fn fetch_v2<Q: Serialize, R: Serialize + DeserializeOwned>(
 				}
 			}
 
-			Ok(response)
+			Ok((response, false))
 		}
 
 		StatusCode::BadRequest | StatusCode::NotFound => {

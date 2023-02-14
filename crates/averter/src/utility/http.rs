@@ -33,7 +33,7 @@ impl ResponseError for InternalServerError {
 }
 
 /// Returns a response with the given status code and body
-fn respond(status_code: u16, mut body: Value, should_merge: bool) -> Response {
+fn respond(status_code: u16, mut body: Value, should_merge: bool, is_cached: bool) -> Response {
 	let status = match StatusCode::from_u16(status_code) {
 		Ok(status) => status,
 		Err(err) => {
@@ -67,25 +67,31 @@ fn respond(status_code: u16, mut body: Value, should_merge: bool) -> Response {
 		}
 	};
 
-	Ok(
-		HttpResponseBuilder::new(StatusCode::from_u16(status_code).unwrap())
-			.content_type("application/json")
-			.body(body),
-	)
+	Ok(HttpResponseBuilder::new(status)
+		.content_type("application/json")
+		.append_header((
+			"Cache-Control",
+			if is_cached {
+				"public, max-age=3600"
+			} else {
+				"no-cache"
+			},
+		))
+		.body(body))
 }
 
 /// Returns a response with the given status code and body
 pub fn http_respond(status_code: u16, body: Value) -> Response {
-	respond(status_code, body, false)
+	respond(status_code, body, false, false)
 }
 
 /// Returns a response with the given status code and body
 /// The body is merged with a date and status message
-pub fn api_respond(status_code: u16, body: Value) -> Response {
-	respond(status_code, body, true)
+pub fn api_respond(status_code: u16, is_cached: bool, body: Value) -> Response {
+	respond(status_code, body, true, is_cached)
 }
 
 /// Returns a response with the given status code and error message
 pub fn error_respond(status_code: u16, message: &str) -> Response {
-	api_respond(status_code, json!({ "error": message }))
+	api_respond(status_code, false, json!({ "error": message }))
 }

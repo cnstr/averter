@@ -43,7 +43,7 @@ pub async fn safety(req: Request) -> Response {
 	};
 
 	let query = CanisterQuery { uris };
-	let mut response =
+	let (mut response, is_cached) =
 		match fetch_v2::<CanisterQuery, CanisterResponse>(query, "/jailbreak/repository/safety")
 			.await
 		{
@@ -54,6 +54,7 @@ pub async fn safety(req: Request) -> Response {
 	match is_single && response.count == 1 {
 		true => api_respond(
 			200,
+			is_cached,
 			json!({
 				"data": match response.data[0].safe {
 					true => "safe",
@@ -78,7 +79,7 @@ pub async fn safety(req: Request) -> Response {
 				})
 				.collect::<Vec<Value>>();
 
-			api_respond(200, json!({ "data": data }))
+			api_respond(200, is_cached, json!({ "data": data }))
 		}
 	}
 }

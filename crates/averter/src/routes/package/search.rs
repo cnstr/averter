@@ -60,7 +60,7 @@ pub async fn search(req: Request) -> Response {
 	};
 
 	let query = CanisterQuery { q: query };
-	let mut response =
+	let (mut response, is_cached) =
 		match fetch_v2::<CanisterQuery, CanisterResponse>(query, "/jailbreak/package/search").await
 		{
 			Ok(response) => response,
@@ -103,6 +103,7 @@ pub async fn search(req: Request) -> Response {
 
 	api_respond(
 		200,
+		is_cached,
 		json!({
 			"data": data,
 		}),

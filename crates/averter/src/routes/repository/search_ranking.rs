@@ -56,7 +56,7 @@ async fn repository_search(query: String) -> Response {
 		rank: None,
 	};
 
-	let mut response =
+	let (mut response, is_cached) =
 		match fetch_v2::<CanisterQuery, CanisterResponse>(query, "/jailbreak/repository/search")
 			.await
 		{
@@ -84,6 +84,7 @@ async fn repository_search(query: String) -> Response {
 
 	api_respond(
 		200,
+		is_cached,
 		json!({
 			"data": data,
 		}),
@@ -101,7 +102,7 @@ async fn repository_ranking(ranking: String) -> Response {
 		rank: Some("*".to_owned()),
 	};
 
-	let mut response =
+	let (mut response, is_cached) =
 		match fetch_v2::<CanisterQuery, CanisterResponse>(query, "/jailbreak/repository/ranking")
 			.await
 		{
@@ -133,6 +134,7 @@ async fn repository_ranking(ranking: String) -> Response {
 
 	api_respond(
 		200,
+		is_cached,
 		json!({
 			"data": data,
 		}),
