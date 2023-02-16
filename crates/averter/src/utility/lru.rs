@@ -47,7 +47,10 @@ impl LRU {
 
 		self.entries.insert(key.to_owned(), value);
 		self.queue.push_front(key.to_owned());
-		println!("cache -> VAL {:#?}", self.queue);
+
+		if cfg!(debug_assertions) {
+			println!("cache -> VAL {:#?}", self.queue);
+		}
 
 		// Pops from the queue and removes the entry from the map
 		// Only runs if the queue is larger than the max size
