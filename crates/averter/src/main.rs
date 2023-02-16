@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{dev::Service, web, App, HttpServer};
 use futures_util::future::FutureExt;
-use http::header::HeaderName;
+use http::{header::HeaderName, HeaderValue};
 use sentry::{init, ClientOptions};
 use sentry_actix::Sentry;
 use std::{env::set_var, io::Result, str::FromStr, time::Instant};
@@ -41,10 +41,21 @@ async fn main() -> Result<()> {
 				next.call(req).map(move |res| {
 					let elapsed = start.elapsed().as_millis();
 					res.map(|mut res| {
-						res.headers_mut().insert(
-							HeaderName::from_str("X-Response-Time").unwrap(),
-							format!("{}", elapsed).parse().unwrap(),
-						);
+						let header_name = match HeaderName::from_str("X-Response-Time") {
+							Ok(header_name) => header_name,
+							Err(_) => {
+								return res; // Return the response as-is
+							}
+						};
+
+						let header_value = match HeaderValue::from_str(&elapsed.to_string()) {
+							Ok(header_value) => header_value,
+							Err(_) => {
+								return res; // Return the response as-is
+							}
+						};
+
+						res.headers_mut().insert(header_name, header_value);
 						res
 					})
 				})
