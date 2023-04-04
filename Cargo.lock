@@ -492,7 +492,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "averter"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -923,7 +923,7 @@ dependencies = [
 
 [[package]]
 name = "deploy"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "serde_json",
  "serde_yaml",
