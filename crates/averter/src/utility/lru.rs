@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-const LRU_MAX_SIZE: usize = 100;
+const LRU_MAX_SIZE: usize = 10;
 
 #[derive(Debug)]
 pub struct LRU {
